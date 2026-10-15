@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>EduTrack Pro — Teacher's Classroom & Exam Companion</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab-active-desktop {
+      background-color: #1e40af;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .tab-active-mobile {
+      color: #2563eb;
+      font-weight: 700;
+    }
+    .tab-active-mobile .nav-indicator {
+      background-color: #dbeafe;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-card {
+      animation: slideIn 0.18s ease-out forwards;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; padding-bottom: 0 !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col pb-20 md:pb-6">
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 left-4 sm:left-auto sm:w-96 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
+
+  <!-- Custom Confirmation Modal (Replaces native confirm/alert) -->
+  <div id="confirmModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-card">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+        </div>
+        <div>
+          <h3 id="confirmModalTitle" class="text-base font-bold text-slate-900">Confirm Action</h3>
+          <p id="confirmModalMessage" class="text-xs text-slate-600 mt-1 leading-relaxed"></p>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button id="confirmCancelBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+          Cancel
+        </button>
+        <button id="confirmAcceptBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition">
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Header Bar -->
+  <header class="bg-blue-950 text-white shadow-md sticky top-0 z-30 no-print">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-wrap items-center justify-between gap-2">
+      <!-- Brand -->
+      <div class="flex items-center gap-2.5">
+        <div class="bg-amber-400 text-blue-950 font-extrabold rounded-xl w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-base sm:text-lg shadow">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-sm sm:text-lg leading-tight tracking-tight">EduTrack Pro</h1>
+          <p class="text-[11px] text-blue-200 hidden sm:block">Topic Scheduler • Roll-Call Attendance • Smart Exam Grader</p>
+        </div>
+      </div>
+
+      <!-- Global Class Selector & Quick Actions -->
+      <div class="flex items-center gap-1.5 sm:gap-2.5 flex-wrap">
+        <div class="flex items-center gap-1.5 bg-blue-900/90 px-2.5 py-1.5 rounded-xl border border-blue-700">
+          <i class="fa-solid fa-users-rectangle text-blue-300 text-xs hidden sm:inline"></i>
+          <label for="globalClassSelect" class="text-[11px] font-medium text-blue-200 hidden md:inline">Class:</label>
+          <select id="globalClassSelect" onchange="handleClassChange(this.value)" class="bg-transparent text-xs sm:text-sm font-bold text-white focus:outline-none cursor-pointer max-w-[155px] sm:max-w-xs truncate"></select>
+        </div>
+        <button onclick="openClassModal()" class="text-xs bg-blue-700 hover:bg-blue-600 active:scale-95 px-2.5 sm:px-3 py-2 rounded-xl font-semibold transition flex items-center gap-1.5 shadow-xs" title="Manage Classes & Students">
+          <i class="fa-solid fa-user-plus"></i>
+          <span class="hidden sm:inline">Roster</span>
+        </button>
+        <button onclick="confirmResetDemoData()" class="text-xs bg-blue-900/80 hover:bg-rose-700 text-blue-200 hover:text-white px-2.5 py-2 rounded-xl transition" title="Reset Demo Data">
+          <i class="fa-solid fa-rotate-left"></i>
+          <span class="hidden lg:inline ml-1">Reset Demo</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Desktop Navigation Tabs (Hidden on Mobile, shown on md+) -->
+    <div class="hidden md:block bg-blue-900/60 border-t border-blue-800/80">
+      <div class="max-w-7xl mx-auto px-4 flex gap-1.5 overflow-x-auto py-2 no-scrollbar">
+        <button onclick="switchTab('topics')" id="dtab-topics" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition whitespace-nowrap flex items-center gap-2 tab-active-desktop">
+          <i class="fa-solid fa-calendar-check"></i> 1. Topic Scheduler
+        </button>
+        <button onclick="switchTab('attendance')" id="dtab-attendance" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-blue-100 hover:bg-blue-800/60 transition whitespace-nowrap flex items-center gap-2">
+          <i class="fa-solid fa-clipboard-user"></i> 2. Roll Call & Notebooks
+        </button>
+        <button onclick="switchTab('patterns')" id="dtab-patterns" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-blue-100 hover:bg-blue-800/60 transition whitespace-nowrap flex items-center gap-2">
+          <i class="fa-solid fa-sliders"></i> 3. Exam Pattern & Tracker
+        </button>
+        <button onclick="switchTab('grader')" id="dtab-grader" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-blue-100 hover:bg-blue-800/60 transition whitespace-nowrap flex items-center gap-2">
+          <i class="fa-solid fa-calculator"></i> 4. Smart Exam Grader
+        </button>
+        <button onclick="switchTab('history')" id="dtab-history" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-blue-100 hover:bg-blue-800/60 transition whitespace-nowrap flex items-center gap-2">
+          <i class="fa-solid fa-chart-line"></i> 5. Student Score History
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sticky Mobile Bottom Navigation Bar (Visible on small screens) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-40 no-print">
+    <div class="grid grid-cols-5 h-16">
+      <button onclick="switchTab('topics')" id="mtab-topics" class="flex flex-col items-center justify-center gap-0.5 text-slate-500 tab-active-mobile">
+        <span class="nav-indicator px-3 py-0.5 rounded-full transition"><i class="fa-solid fa-calendar-check text-sm"></i></span>
+        <span class="text-[10px] leading-tight">Topics</span>
+      </button>
+      <button onclick="switchTab('attendance')" id="mtab-attendance" class="flex flex-col items-center justify-center gap-0.5 text-slate-500">
+        <span class="nav-indicator px-3 py-0.5 rounded-full transition"><i class="fa-solid fa-clipboard-user text-sm"></i></span>
+        <span class="text-[10px] leading-tight">Roll Call</span>
+      </button>
+      <button onclick="switchTab('patterns')" id="mtab-patterns" class="flex flex-col items-center justify-center gap-0.5 text-slate-500">
+        <span class="nav-indicator px-3 py-0.5 rounded-full transition"><i class="fa-solid fa-sliders text-sm"></i></span>
+        <span class="text-[10px] leading-tight">Patterns</span>
+      </button>
+      <button onclick="switchTab('grader')" id="mtab-grader" class="flex flex-col items-center justify-center gap-0.5 text-slate-500">
+        <span class="nav-indicator px-3 py-0.5 rounded-full transition"><i class="fa-solid fa-calculator text-sm"></i></span>
+        <span class="text-[10px] leading-tight">Grader</span>
+      </button>
+      <button onclick="switchTab('history')" id="mtab-history" class="flex flex-col items-center justify-center gap-0.5 text-slate-500">
+        <span class="nav-indicator px-3 py-0.5 rounded-full transition"><i class="fa-solid fa-chart-line text-sm"></i></span>
+        <span class="text-[10px] leading-tight">History</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 space-y-5">
+
+    <!-- ==================== TAB 1: TOPIC SCHEDULER & HISTORY ==================== -->
+    <section id="view-topics" class="space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Schedule Topic Form -->
+        <div class="lg:col-span-4 bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 h-fit">
+          <div class="flex items-center gap-2 mb-1">
+            <i class="fa-solid fa-book-open text-blue-600"></i>
+            <h2 class="text-base font-bold text-slate-800">Schedule Daily Topic</h2>
+          </div>
+          <p class="text-xs text-slate-500 mb-4">Plan daily lessons for the active class and track completion.</p>
+
+          <form id="topicForm" onsubmit="saveTopic(event)" class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Date</label>
+              <input type="date" id="topicDate" required class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Subject / Unit</label>
+                <input type="text" id="topicSubject" placeholder="e.g. Algebra" required class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Period / Slot</label>
+                <input type="text" id="topicPeriod" placeholder="e.g. Period 2" required class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Topic Title to Teach</label>
+              <input type="text" id="topicTitle" placeholder="e.g. Nature of Roots & Discriminant" required class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+              <select id="topicStatus" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                <option value="Planned">Planned (Upcoming)</option>
+                <option value="Completed">Completed (Taught in Class)</option>
+                <option value="Carried Over">Carried Over (Needs Extra Class)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Teaching Notes / Homework Assigned</label>
+              <textarea id="topicNotes" rows="2" placeholder="e.g. Solved Ex 4.2 Q1-Q5. Assigned Q6-Q8 for homework." class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold py-3 rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2">
+              <i class="fa-solid fa-plus"></i> Save Topic Schedule
+            </button>
+          </form>
+        </div>
+
+        <!-- Topic Schedule & History List -->
+        <div class="lg:col-span-8 bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">Class Topic History & Schedule</h2>
+              <p class="text-xs text-slate-500">Tap any status badge to cycle between Planned, Completed, and Carried Over.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <select id="topicFilterStatus" onchange="renderTopics()" class="border border-slate-300 rounded-xl px-3 py-2 text-xs bg-white font-medium">
+                <option value="ALL">All Statuses</option>
+                <option value="Planned">Planned</option>
+                <option value="Completed">Completed</option>
+                <option value="Carried Over">Carried Over</option>
+              </select>
+              <input type="text" id="topicSearch" oninput="renderTopics()" placeholder="Search topic..." class="border border-slate-300 rounded-xl px-3 py-2 text-xs flex-1 sm:w-44" />
+            </div>
+          </div>
+
+          <!-- Stats Bar -->
+          <div id="topicStatsBar" class="grid grid-cols-3 gap-2.5 sm:gap-3"></div>
+
+          <!-- Mobile Topic Cards (shown on small screens) -->
+          <div id="topicMobileCards" class="md:hidden space-y-2.5"></div>
+
+          <!-- Desktop Topic Table (shown on md+) -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs uppercase text-slate-500 bg-slate-50">
+                  <th class="py-2.5 px-3">Date & Period</th>
+                  <th class="py-2.5 px-3">Subject & Topic</th>
+                  <th class="py-2.5 px-3">Notes / Homework</th>
+                  <th class="py-2.5 px-3">Status</th>
+                  <th class="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="topicTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: ATTENDANCE & NOTE CORRECTION (ROLL CALL CARD + TABLE MODE) ==================== -->
+    <section id="view-attendance" class="hidden space-y-4 sm:space-y-5">
+      <!-- Top Control Bar -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-3 pb-4 border-b border-slate-200">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Attendance & Note Check Date</label>
+              <input type="date" id="attDate" onchange="loadAttendanceSheet()" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Notebook / Assignment Title (Optional)</label>
+              <input type="text" id="attNoteTopic" oninput="syncNoteTopicInput(this.value)" placeholder="e.g. Ex 4.3 Classwork Notebook Check" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="markAllAttendance('Present', 'Corrected')" class="flex-1 sm:flex-initial text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2.5 rounded-xl font-semibold transition">
+              <i class="fa-solid fa-check-double mr-1"></i> All Present & Corrected
+            </button>
+            <button onclick="saveAttendanceSheet(true)" class="flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-floppy-disk"></i> Save Daily Sheet
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Summary Counters -->
+        <div id="attendanceSummaryCards" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3"></div>
+
+        <!-- View Mode Switcher Bar: Roll Call Card Mode vs Full Sheet Table Mode -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-100 p-2 rounded-xl border border-slate-200">
+          <div class="flex items-center gap-1.5 w-full sm:w-auto">
+            <button id="btnModeCard" onclick="setAttendanceViewMode('card')" class="flex-1 sm:flex-initial px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-xs">
+              <i class="fa-solid fa-id-card-clip"></i> Roll Call Card Mode
+            </button>
+            <button id="btnModeTable" onclick="setAttendanceViewMode('table')" class="flex-1 sm:flex-initial px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-600 hover:bg-white">
+              <i class="fa-solid fa-table-list"></i> Full Class Sheet
+            </button>
+          </div>
+
+          <!-- Card Mode Options (1 Card vs 2 Cards + Auto-Advance) -->
+          <div id="cardModeSettings" class="flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200">
+            <div class="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200">
+              <span class="text-[11px] font-semibold text-slate-500 mr-1">Show:</span>
+              <button id="btnCardSize1" onclick="setRollCallPageSize(1)" class="px-2.5 py-1 rounded text-xs font-bold bg-blue-100 text-blue-800 transition">
+                1 Student
+              </button>
+              <button id="btnCardSize2" onclick="setRollCallPageSize(2)" class="px-2.5 py-1 rounded text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                2 Students
+              </button>
+            </div>
+
+            <label class="flex items-center gap-1.5 text-xs font-medium text-slate-700 cursor-pointer select-none">
+              <input type="checkbox" id="autoNextToggle" onchange="toggleAutoAdvance(this.checked)" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+              <span>Auto-next on Attendance tap</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ==================== MODE A: ROLL CALL CARD VIEW ==================== -->
+        <div id="attendanceCardViewContainer" class="space-y-4 pt-1">
+          <!-- Progress Bar & Quick Roll-Number Pill Bar -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span id="rollCallProgressLabel" class="font-bold text-slate-700">Calling Roll...</span>
+              <span class="text-slate-500 hidden sm:inline">Tip: Use <kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-[10px]">←</kbd> <kbd class="px-1.5 py-0.5 bg-slate-200 rounded text-[10px]">→</kbd> arrow keys or swipe cards</span>
+            </div>
+            <!-- Quick Jump Roll Pills -->
+            <div id="rollCallQuickPills" class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar"></div>
+          </div>
+
+          <!-- Active Student Card(s) Container (1 or 2 cards max) -->
+          <div id="rollCallCardsStage" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+          <!-- Prominent Previous / Next Navigation Bar -->
+          <div class="flex items-center justify-between gap-3 pt-2">
+            <button id="btnPrevStudent" onclick="navigateRollCall(-1)" class="flex-1 py-3.5 px-4 rounded-2xl font-bold text-sm bg-slate-200 hover:bg-slate-300 active:scale-[0.98] text-slate-800 transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none shadow-xs">
+              <i class="fa-solid fa-arrow-left"></i> Previous Student
+            </button>
+            <button id="btnNextStudent" onclick="navigateRollCall(1)" class="flex-1 py-3.5 px-4 rounded-2xl font-bold text-sm bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white transition flex items-center justify-center gap-2 shadow-md">
+              Next Student <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ==================== MODE B: FULL CLASS TABLE VIEW ==================== -->
+        <div id="attendanceTableViewContainer" class="hidden">
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs uppercase text-slate-500 bg-slate-50">
+                  <th class="py-2.5 px-3">Roll</th>
+                  <th class="py-2.5 px-3">Student Name</th>
+                  <th class="py-2.5 px-3">Class Attendance</th>
+                  <th class="py-2.5 px-3">Notebook Status</th>
+                  <th class="py-2.5 px-3">Teacher Remarks</th>
+                  <th class="py-2.5 px-3">Overall History</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saved Attendance & Notebook Logs -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200">
+        <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">Saved Attendance & Notebook Check History</h3>
+        <div id="attendanceHistoryLog" class="flex flex-wrap gap-2"></div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: EXAM PATTERN & CORRECTION TRACKER ==================== -->
+    <section id="view-patterns" class="hidden space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Create / Edit Exam Pattern -->
+        <div class="lg:col-span-5 bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 space-y-4 h-fit">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">Define Question Paper Pattern</h2>
+            <p class="text-xs text-slate-500">Configure sections, question ranges, max marks, and choice rules once per exam.</p>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Exam Name</label>
+              <input type="text" id="examNameInput" placeholder="e.g. Midterm Exam - Mathematics" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm" />
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Exam Date</label>
+                <input type="date" id="examDateInput" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Papers Collected</label>
+                <input type="number" id="examCollectedInput" min="0" placeholder="e.g. 5" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm" />
+              </div>
+            </div>
+
+            <!-- Section Builder -->
+            <div class="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase text-slate-600">Add Section to Question Paper</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600">Section Name</label>
+                  <input type="text" id="secName" placeholder="Sec A (Short Qs)" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600">Marks per Question</label>
+                  <input type="number" id="secMarksPerQ" step="0.5" min="0.5" value="2" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs bg-white" />
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600">From Q.No</label>
+                  <input type="number" id="secStartQ" min="1" value="1" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600">To Q.No</label>
+                  <input type="number" id="secEndQ" min="1" value="5" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600" title="Number of questions to count in this section">Best N Choice</label>
+                  <input type="number" id="secMaxAttempt" min="1" value="5" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs bg-white" />
+                </div>
+              </div>
+              <button type="button" onclick="addSectionToDraft()" class="w-full bg-slate-800 hover:bg-slate-900 active:scale-[0.99] text-white text-xs font-semibold py-2.5 rounded-lg transition">
+                + Add Section to Draft Pattern
+              </button>
+            </div>
+
+            <!-- Draft Sections Preview -->
+            <div>
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="text-xs font-semibold text-slate-600">Draft Sections</span>
+                <span id="draftTotalMarksLabel" class="text-xs font-bold text-blue-700">Max Exam Total: 0 Marks</span>
+              </div>
+              <div id="draftSectionsList" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
+            </div>
+
+            <button type="button" onclick="saveExamPattern()" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold py-3 rounded-xl text-sm shadow-sm transition">
+              Save Exam & Question Pattern
+            </button>
+          </div>
+        </div>
+
+        <!-- Existing Exams & Paper Correction Progress -->
+        <div class="lg:col-span-7 bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 space-y-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">Exam Paper Correction Tracker & Saved Patterns</h2>
+            <p class="text-xs text-slate-500">Monitor how many answer scripts have been collected vs. corrected.</p>
+          </div>
+          <div id="examsListContainer" class="space-y-3.5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: SMART EXAM TOTALING TOOL ==================== -->
+    <section id="view-grader" class="hidden space-y-5">
+      <!-- Top Selector Bar -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 items-end">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">1. Select Exam Pattern</label>
+            <select id="graderExamSelect" onchange="initGraderWorkspace()" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white focus:ring-2 focus:ring-blue-500"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">2. Select Student to Grade</label>
+            <select id="graderStudentSelect" onchange="loadStudentIntoGrader()" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white focus:ring-2 focus:ring-blue-500"></select>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="clearCurrentStudentDraft()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-3 rounded-xl text-xs transition">
+              Clear Marks
+            </button>
+            <button onclick="saveGradedPaper()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm shadow-sm transition">
+              <i class="fa-solid fa-check mr-1"></i> Save Score Sheet
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Grader Workspace -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Left Column: Rapid Answer-Script Entry + Anti-Duplicate Guard -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border-2 border-blue-600 space-y-4">
+            <div>
+              <span class="inline-block bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full mb-1">ANTI-MISTAKE ENTRY MODE</span>
+              <h3 class="text-base font-bold text-slate-800">Rapid Booklet Entry (Page-by-Page)</h3>
+              <p class="text-xs text-slate-500">Enter Question No. and Marks in the order written in the student's answer script. Duplicate answers are caught automatically!</p>
+            </div>
+
+            <form onsubmit="handleRapidMarkEntry(event)" class="grid grid-cols-12 gap-2 items-end">
+              <div class="col-span-4">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Q. No.</label>
+                <input type="number" id="rapidQNo" placeholder="e.g. 5" required min="1" class="w-full border-2 border-slate-300 rounded-xl px-3 py-2.5 text-base font-extrabold focus:border-blue-600 focus:outline-none" />
+              </div>
+              <div class="col-span-4">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Marks</label>
+                <input type="number" id="rapidMarks" placeholder="e.g. 3.5" step="0.25" required min="0" class="w-full border-2 border-slate-300 rounded-xl px-3 py-2.5 text-base font-extrabold focus:border-blue-600 focus:outline-none" />
+              </div>
+              <div class="col-span-4">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-3 rounded-xl text-sm shadow transition">
+                  + Add
+                </button>
+              </div>
+            </form>
+
+            <!-- Duplicate Question Conflict Banner (Inline) -->
+            <div id="duplicateAlertBox" class="hidden bg-amber-50 border-2 border-amber-400 rounded-xl p-4 space-y-3 animate-card">
+              <div class="flex items-start gap-2.5">
+                <div class="bg-amber-400 text-amber-950 font-extrabold rounded-full w-6 h-6 flex items-center justify-center shrink-0 text-xs">!</div>
+                <div>
+                  <h4 class="text-sm font-bold text-amber-950">Duplicate Answer Detected!</h4>
+                  <p id="duplicateAlertMessage" class="text-xs text-amber-900 mt-0.5 leading-relaxed"></p>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2 pt-1">
+                <button onclick="resolveDuplicate('KEEP_HIGHER')" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-xs">
+                  Keep Higher Mark
+                </button>
+                <button onclick="resolveDuplicate('KEEP_EXISTING')" class="bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold px-3 py-2 rounded-lg">
+                  Keep First Entry Only
+                </button>
+                <button onclick="resolveDuplicate('OVERWRITE')" class="bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold px-3 py-2 rounded-lg">
+                  Replace with New Mark
+                </button>
+              </div>
+            </div>
+
+            <!-- Validation Error Banner -->
+            <div id="graderErrorBanner" class="hidden bg-rose-50 border border-rose-300 text-rose-700 px-3 py-2.5 rounded-xl text-xs font-semibold"></div>
+
+            <!-- Chronological Entry Audit Trail -->
+            <div class="border-t border-slate-200 pt-3">
+              <h4 class="text-xs font-bold uppercase text-slate-500 mb-2">Booklet Entry Audit Log (Prevents Double Counting)</h4>
+              <div id="bookletAuditList" class="space-y-1.5 max-h-56 overflow-y-auto text-xs"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Live Pattern Breakdown & Auto-Calculated Total -->
+        <div class="lg:col-span-7 space-y-4">
+          <!-- Live Scoreboard Card -->
+          <div class="bg-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-md flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <span class="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Verified Final Score</span>
+              <div class="flex items-baseline gap-2 mt-1">
+                <span id="liveFinalTotal" class="text-3xl sm:text-4xl font-extrabold text-amber-400">0</span>
+                <span id="liveMaxTotal" class="text-base sm:text-lg text-slate-300">/ 0 Marks</span>
+                <span id="livePercentageBadge" class="ml-1 bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">0%</span>
+              </div>
+            </div>
+            <div class="text-left sm:text-right space-y-1 text-xs text-slate-300">
+              <div id="liveDupCounter">Duplicate Answers Blocked: <strong class="text-amber-300">0</strong></div>
+              <div id="liveChoiceCounter">Extra Optional Answers Ignored: <strong class="text-amber-300">0</strong></div>
+            </div>
+          </div>
+
+          <!-- Section-by-Section Pattern Grid -->
+          <div id="graderSectionsContainer" class="space-y-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: STUDENT SCORE SHEET HISTORY ==================== -->
+    <section id="view-history" class="hidden space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Student Directory & Summary -->
+        <div class="lg:col-span-4 bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 space-y-4 h-fit no-print">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">Class Students</h2>
+              <p class="text-xs text-slate-500">Tap a student to view their cumulative report.</p>
+            </div>
+            <button onclick="exportClassScoresCSV()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl border border-slate-300 flex items-center gap-1">
+              <i class="fa-solid fa-file-csv"></i> CSV
+            </button>
+          </div>
+          <div id="historyStudentList" class="space-y-2 max-h-96 lg:max-h-none overflow-y-auto"></div>
+        </div>
+
+        <!-- Detailed Student Score Sheet Viewer -->
+        <div class="lg:col-span-8 space-y-4">
+          <div id="studentDetailedReportContainer" class="bg-white p-4 sm:p-6 rounded-2xl shadow-xs border border-slate-200"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: MANAGE CLASSES & STUDENTS ==================== -->
+  <div id="classModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-card">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h3 class="text-base font-bold text-slate-800">Manage Classes & Student Roster</h3>
+        <button onclick="closeClassModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center">&times;</button>
+      </div>
+
+      <!-- Add New Class -->
+      <form onsubmit="addNewClass(event)" class="flex flex-col sm:flex-row gap-2">
+        <input type="text" id="newClassName" placeholder="New Class Name (e.g. Class 9-B Science)" required class="flex-1 border border-slate-300 rounded-xl px-3 py-2.5 text-sm" />
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl">
+          + Add Class
+        </button>
+      </form>
+
+      <!-- Add Student to Active Class -->
+      <div class="border-t border-slate-200 pt-4">
+        <h4 class="text-xs font-bold uppercase text-slate-500 mb-2">Students in Active Class</h4>
+        <form onsubmit="addNewStudent(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-3">
+          <input type="text" id="newStudentRoll" placeholder="Roll No (e.g. 106)" required class="sm:col-span-3 border border-slate-300 rounded-xl px-3 py-2.5 text-sm" />
+          <input type="text" id="newStudentName" placeholder="Student Full Name" required class="sm:col-span-6 border border-slate-300 rounded-xl px-3 py-2.5 text-sm" />
+          <button type="submit" class="sm:col-span-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2.5 rounded-xl">
+            + Add Student
+          </button>
+        </form>
+        <div id="modalStudentList" class="divide-y divide-slate-100 max-h-60 overflow-y-auto border border-slate-200 rounded-xl"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== STATE & SAMPLE INITIALIZATION ====================
+    const STORAGE_KEY = 'edutrack_teacher_app_v2';
+    let state = null;
+    let currentTab = 'topics';
+
+    // Attendance Roll Call Card State
+    let attendanceViewMode = 'card'; // 'card' | 'table'
+    let rollCallPageSize = 1;        // 1 or 2 students shown at a time
+    let rollCallIndex = 0;           // current starting student index
+    let autoAdvanceOnAttendance = false;
+    let activeAttendanceDraft = {
+      noteTopic: '',
+      records: {} // studentId -> { attendance, noteStatus, remarks }
+    };
+
+    // Exam Grader State
+    let draftSections = [];
+    let activeGraderMarks = {};
+    let activeAuditLog = [];
+    let pendingDuplicate = null;
+    let selectedHistoryStudentId = null;
+
+    // UI Helper: Toast Notification (Never use alert())
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const colors = {
+        success: 'bg-emerald-800 text-white border-emerald-600',
+        warning: 'bg-amber-600 text-white border-amber-500',
+        error: 'bg-rose-700 text-white border-rose-500',
+        info: 'bg-slate-800 text-white border-slate-700'
+      };
+      const icons = {
+        success: 'fa-circle-check',
+        warning: 'fa-triangle-exclamation',
+        error: 'fa-circle-xmark',
+        info: 'fa-circle-info'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold animate-card ${colors[type] || colors.info}`;
+      toast.innerHTML = `
+        <i class="fa-solid ${icons[type] || icons.info} text-sm shrink-0"></i>
+        <span class="flex-1">${message}</span>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => toast.remove(), 250);
+      }, 2800);
+    }
+
+    // UI Helper: Custom Confirmation Modal (Never use confirm())
+    function askConfirmation(title, message, onConfirm) {
+      const modal = document.getElementById('confirmModal');
+      document.getElementById('confirmModalTitle').textContent = title;
+      document.getElementById('confirmModalMessage').textContent = message;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      const cancelBtn = document.getElementById('confirmCancelBtn');
+      const acceptBtn = document.getElementById('confirmAcceptBtn');
+
+      const cleanup = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        cancelBtn.onclick = null;
+        acceptBtn.onclick = null;
+      };
+
+      cancelBtn.onclick = cleanup;
+      acceptBtn.onclick = () => {
+        cleanup();
+        onConfirm();
+      };
+    }
+
+    function getDefaultState() {
+      const today = new Date().toISOString().split('T')[0];
+      return {
+        activeClassId: 'c1',
+        classes: [
+          { id: 'c1', name: 'Class 10-A (Mathematics)' },
+          { id: 'c2', name: 'Class 9-B (Physics)' }
+        ],
+        students: [
+          { id: 's1', classId: 'c1', roll: '101', name: 'Aarav Sharma' },
+          { id: 's2', classId: 'c1', roll: '102', name: 'Diya Patel' },
+          { id: 's3', classId: 'c1', roll: '103', name: 'Rohan Nair' },
+          { id: 's4', classId: 'c1', roll: '104', name: 'Sneha Iyer' },
+          { id: 's5', classId: 'c1', roll: '105', name: 'Kabir Verma' },
+          { id: 's6', classId: 'c2', roll: '201', name: 'Meera Krishnan' },
+          { id: 's7', classId: 'c2', roll: '202', name: 'Ishaan Gupta' }
+        ],
+        topics: [
+          {
+            id: 't1',
+            classId: 'c1',
+            date: '2026-10-13',
+            subject: 'Quadratic Equations',
+            period: 'Period 1',
+            title: 'Factorization Method & Roots',
+            status: 'Completed',
+            notes: 'Solved Ex 4.1 completely. Students grasped splitting middle term.'
+          },
+          {
+            id: 't2',
+            classId: 'c1',
+            date: '2026-10-14',
+            subject: 'Quadratic Equations',
+            period: 'Period 2',
+            title: 'Nature of Roots & Discriminant (b² - 4ac)',
+            status: 'Completed',
+            notes: 'Homework assigned: Ex 4.3 Q1 to Q6 in classwork notebook.'
+          },
+          {
+            id: 't3',
+            classId: 'c1',
+            date: today,
+            subject: 'Quadratic Equations',
+            period: 'Period 1',
+            title: 'Word Problems on Speed, Time & Geometry',
+            status: 'Planned',
+            notes: 'Collect notebooks for Ex 4.3 correction.'
+          }
+        ],
+        attendanceSheets: {
+          'c1_2026-10-14': {
+            classId: 'c1',
+            date: '2026-10-14',
+            noteTopic: 'Ex 4.3 Discriminant Notebook Check',
+            records: {
+              's1': { attendance: 'Present', noteStatus: 'Corrected', remarks: 'Neat work, all graphs drawn' },
+              's2': { attendance: 'Present', noteStatus: 'Corrected', remarks: 'Completed all steps' },
+              's3': { attendance: 'Present', noteStatus: 'Incomplete', remarks: 'Q5 and Q6 missing' },
+              's4': { attendance: 'Absent', noteStatus: 'Not Submitted', remarks: 'On medical leave' },
+              's5': { attendance: 'Present', noteStatus: 'Submitted - Pending', remarks: 'Kept on teacher desk' }
+            }
+          }
+        },
+        exams: [
+          {
+            id: 'ex1',
+            classId: 'c1',
+            name: 'Unit Test 2 — Quadratic & Arithmetic Progressions',
+            date: '2026-10-12',
+            papersCollected: 5,
+            sections: [
+              { id: 'sec1', name: 'Section A (Compulsory Short Qs)', startQ: 1, endQ: 4, marksPerQ: 2, maxAttempt: 4 },
+              { id: 'sec2', name: 'Section B (Attempt Any 3 out of 4)', startQ: 5, endQ: 8, marksPerQ: 4, maxAttempt: 3 },
+              { id: 'sec3', name: 'Section C (Long Answer - Any 1 of 2)', startQ: 9, endQ: 10, marksPerQ: 10, maxAttempt: 1 }
+            ]
+          }
+        ],
+        scores: {
+          'ex1_s1': {
+            examId: 'ex1',
+            studentId: 's1',
+            updatedAt: '2026-10-14 16:30',
+            marks: { 1: 2, 2: 2, 3: 1.5, 4: 2, 5: 4, 6: 3, 7: 4, 8: 2, 9: 9 },
+            auditLog: [
+              { time: '16:25:10', qNo: 1, enteredMark: 2, action: 'ADDED', note: 'Page 1 entry' },
+              { time: '16:26:04', qNo: 5, enteredMark: 4, action: 'ADDED', note: 'Page 3 entry' },
+              { time: '16:28:40', qNo: 5, enteredMark: 3.5, action: 'DUPLICATE_BLOCKED', note: 'Student repeated Q5 on last page (3.5M). Kept higher mark (4M).' },
+              { time: '16:29:15', qNo: 8, enteredMark: 2, action: 'EXTRA_CHOICE_IGNORED', note: 'Attempted 4/4 in Sec B; lowest mark (Q8: 2M) excluded automatically.' }
+            ]
+          },
+          'ex1_s2': {
+            examId: 'ex1',
+            studentId: 's2',
+            updatedAt: '2026-10-14 16:45',
+            marks: { 1: 2, 2: 1, 3: 2, 4: 2, 5: 3.5, 6: 4, 7: 3.5, 10: 8.5 },
+            auditLog: [
+              { time: '16:42:00', qNo: 1, enteredMark: 2, action: 'ADDED', note: 'Standard entry' }
+            ]
+          }
+        }
+      };
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try { state = JSON.parse(raw); } catch (e) { state = getDefaultState(); }
+      } else {
+        state = getDefaultState();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function confirmResetDemoData() {
+      askConfirmation(
+        'Reset Sample Classroom Data?',
+        'This will restore all classes, students, attendance records, and exam scores back to the default demo state.',
+        () => {
+          state = getDefaultState();
+          saveState();
+          initApp();
+          showToast('Demo data restored!', 'info');
+        }
+      );
+    }
+
+    // ==================== NAVIGATION & INITIALIZATION ====================
+    function initApp() {
+      loadState();
+      renderGlobalClassSelect();
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('topicDate').value = today;
+      document.getElementById('attDate').value = '2026-10-14';
+      document.getElementById('examDateInput').value = today;
+
+      draftSections = [
+        { id: 'd1', name: 'Section A (Compulsory)', startQ: 1, endQ: 5, marksPerQ: 2, maxAttempt: 5 },
+        { id: 'd2', name: 'Section B (Attempt Any 3 of 5)', startQ: 6, endQ: 10, marksPerQ: 5, maxAttempt: 3 }
+      ];
+
+      renderTopics();
+      loadAttendanceSheet();
+      renderDraftSections();
+      renderExamsList();
+      initGraderWorkspace();
+      renderHistoryView();
+      setupRollCallSwipeAndKeyboard();
+    }
+
+    function renderGlobalClassSelect() {
+      const sel = document.getElementById('globalClassSelect');
+      sel.innerHTML = state.classes.map(c =>
+        `<option value="${c.id}" ${c.id === state.activeClassId ? 'selected' : ''} class="text-slate-900">${c.name}</option>`
+      ).join('');
+    }
+
+    function handleClassChange(classId) {
+      state.activeClassId = classId;
+      saveState();
+      selectedHistoryStudentId = null;
+      rollCallIndex = 0;
+      renderTopics();
+      loadAttendanceSheet();
+      renderExamsList();
+      initGraderWorkspace();
+      renderHistoryView();
+      showToast('Switched active class', 'info');
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      const tabs = ['topics', 'attendance', 'patterns', 'grader', 'history'];
+      tabs.forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tab);
+
+        // Desktop Tab Styling
+        const dbtn = document.getElementById(`dtab-${t}`);
+        if (dbtn) {
+          if (t === tab) {
+            dbtn.classList.add('tab-active-desktop');
+            dbtn.classList.remove('text-blue-100', 'hover:bg-blue-800/60');
+          } else {
+            dbtn.classList.remove('tab-active-desktop');
+            dbtn.classList.add('text-blue-100', 'hover:bg-blue-800/60');
+          }
+        }
+
+        // Mobile Bottom Nav Styling
+        const mbtn = document.getElementById(`mtab-${t}`);
+        if (mbtn) {
+          if (t === tab) {
+            mbtn.classList.add('tab-active-mobile');
+          } else {
+            mbtn.classList.remove('tab-active-mobile');
+          }
+        }
+      });
+
+      if (tab === 'attendance') renderAttendanceViews();
+      if (tab === 'grader') initGraderWorkspace();
+      if (tab === 'history') renderHistoryView();
+      if (tab === 'patterns') renderExamsList();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function getActiveStudents() {
+      return state.students.filter(s => s.classId === state.activeClassId);
+    }
+
+    // ==================== TAB 1: TOPIC SCHEDULER & HISTORY ====================
+    function saveTopic(e) {
+      e.preventDefault();
+      const newTopic = {
+        id: 't_' + Date.now(),
+        classId: state.activeClassId,
+        date: document.getElementById('topicDate').value,
+        subject: document.getElementById('topicSubject').value.trim(),
+        period: document.getElementById('topicPeriod').value.trim(),
+        title: document.getElementById('topicTitle').value.trim(),
+        status: document.getElementById('topicStatus').value,
+        notes: document.getElementById('topicNotes').value.trim()
+      };
+      state.topics.unshift(newTopic);
+      saveState();
+      document.getElementById('topicTitle').value = '';
+      document.getElementById('topicNotes').value = '';
+      renderTopics();
+      showToast('Daily topic scheduled!');
+    }
+
+    function cycleTopicStatus(topicId) {
+      const order = ['Planned', 'Completed', 'Carried Over'];
+      const topic = state.topics.find(t => t.id === topicId);
+      if (!topic) return;
+      const nextIdx = (order.indexOf(topic.status) + 1) % order.length;
+      topic.status = order[nextIdx];
+      saveState();
+      renderTopics();
+      showToast(`Topic marked as "${topic.status}"`, 'info');
+    }
+
+    function deleteTopic(topicId) {
+      state.topics = state.topics.filter(t => t.id !== topicId);
+      saveState();
+      renderTopics();
+      showToast('Topic entry deleted', 'warning');
+    }
+
+    function renderTopics() {
+      const classTopics = state.topics
+        .filter(t => t.classId === state.activeClassId)
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      const statusFilter = document.getElementById('topicFilterStatus').value;
+      const query = document.getElementById('topicSearch').value.toLowerCase();
+
+      const filtered = classTopics.filter(t => {
+        const matchStatus = statusFilter === 'ALL' || t.status === statusFilter;
+        const matchQ = !query || t.title.toLowerCase().includes(query) || t.subject.toLowerCase().includes(query) || t.notes.toLowerCase().includes(query);
+        return matchStatus && matchQ;
+      });
+
+      const plannedCount = classTopics.filter(t => t.status === 'Planned').length;
+      const completedCount = classTopics.filter(t => t.status === 'Completed').length;
+      const carriedCount = classTopics.filter(t => t.status === 'Carried Over').length;
+
+      document.getElementById('topicStatsBar').innerHTML = `
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-2.5 sm:p-3">
+          <div class="text-[11px] text-blue-700 font-semibold">Planned</div>
+          <div class="text-lg sm:text-xl font-extrabold text-blue-900">${plannedCount}</div>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 sm:p-3">
+          <div class="text-[11px] text-emerald-700 font-semibold">Completed</div>
+          <div class="text-lg sm:text-xl font-extrabold text-emerald-900">${completedCount}</div>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5 sm:p-3">
+          <div class="text-[11px] text-amber-700 font-semibold">Carried Over</div>
+          <div class="text-lg sm:text-xl font-extrabold text-amber-900">${carriedCount}</div>
+        </div>
+      `;
+
+      const mobileCards = document.getElementById('topicMobileCards');
+      const tbody = document.getElementById('topicTableBody');
+
+      if (filtered.length === 0) {
+        const emptyHtml = `<div class="py-8 text-center text-slate-400 text-sm">No scheduled topics found for this class.</div>`;
+        mobileCards.innerHTML = emptyHtml;
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400 text-sm">No scheduled topics found for this class.</td></tr>`;
+        return;
+      }
+
+      const getBadgeStyle = (status) => status === 'Completed'
+        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+        : status === 'Planned'
+        ? 'bg-blue-100 text-blue-800 border-blue-300'
+        : 'bg-amber-100 text-amber-800 border-amber-300';
+
+      // Render Mobile Cards
+      mobileCards.innerHTML = filtered.map(t => `
+        <div class="border border-slate-200 rounded-xl p-3.5 bg-slate-50/60 space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span class="text-[11px] font-bold uppercase text-blue-700">${t.subject} • ${t.period}</span>
+              <h4 class="font-bold text-slate-900 text-sm leading-snug">${t.title}</h4>
+              <span class="text-[11px] text-slate-500"><i class="fa-regular fa-calendar mr-1"></i>${t.date}</span>
+            </div>
+            <button onclick="cycleTopicStatus('${t.id}')" class="text-xs font-bold px-2.5 py-1 rounded-full border ${getBadgeStyle(t.status)} shrink-0 active:scale-95">
+              ${t.status}
+            </button>
+          </div>
+          ${t.notes ? `<p class="text-xs text-slate-600 bg-white p-2 rounded-lg border border-slate-200/80">${t.notes}</p>` : ''}
+          <div class="flex justify-end pt-1">
+            <button onclick="deleteTopic('${t.id}')" class="text-xs text-rose-600 font-semibold">Delete</button>
+          </div>
+        </div>
+      `).join('');
+
+      // Render Desktop Table
+      tbody.innerHTML = filtered.map(t => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-3 px-3 whitespace-nowrap">
+            <div class="font-semibold text-slate-800">${t.date}</div>
+            <div class="text-xs text-slate-500">${t.period}</div>
+          </td>
+          <td class="py-3 px-3">
+            <div class="text-xs font-bold uppercase text-blue-700">${t.subject}</div>
+            <div class="font-medium text-slate-800">${t.title}</div>
+          </td>
+          <td class="py-3 px-3 text-xs text-slate-600 max-w-xs">${t.notes || '—'}</td>
+          <td class="py-3 px-3 whitespace-nowrap">
+            <button onclick="cycleTopicStatus('${t.id}')" title="Click to change status" class="text-xs font-semibold px-2.5 py-1 rounded-full border ${getBadgeStyle(t.status)} cursor-pointer">
+              ${t.status}
+            </button>
+          </td>
+          <td class="py-3 px-3 text-right">
+            <button onclick="deleteTopic('${t.id}')" class="text-xs text-rose-500 hover:text-rose-700 font-medium">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // ==================== TAB 2: ATTENDANCE & NOTE CORRECTION (DUAL MODE: ROLL CALL CARD + TABLE) ====================
+    function loadAttendanceSheet() {
+      const date = document.getElementById('attDate').value;
+      const key = `${state.activeClassId}_${date}`;
+      const existing = state.attendanceSheets[key];
+      const students = getActiveStudents();
+
+      activeAttendanceDraft = {
+        noteTopic: existing ? (existing.noteTopic || '') : '',
+        records: {}
+      };
+
+      students.forEach(s => {
+        const rec = existing && existing.records && existing.records[s.id]
+          ? existing.records[s.id]
+          : { attendance: 'Present', noteStatus: 'Corrected', remarks: '' };
+        activeAttendanceDraft.records[s.id] = {
+          attendance: rec.attendance,
+          noteStatus: rec.noteStatus,
+          remarks: rec.remarks || ''
+        };
+      });
+
+      document.getElementById('attNoteTopic').value = activeAttendanceDraft.noteTopic;
+
+      if (rollCallIndex >= students.length) {
+        rollCallIndex = 0;
+      }
+
+      renderAttendanceViews();
+      renderAttendanceHistoryChips();
+    }
+
+    function syncNoteTopicInput(val) {
+      activeAttendanceDraft.noteTopic = val;
+      autoPersistAttendanceDraft();
+    }
+
+    function autoPersistAttendanceDraft() {
+      const date = document.getElementById('attDate').value;
+      if (!date) return;
+      const key = `${state.activeClassId}_${date}`;
+      state.attendanceSheets[key] = {
+        classId: state.activeClassId,
+        date,
+        noteTopic: activeAttendanceDraft.noteTopic.trim(),
+        records: JSON.parse(JSON.stringify(activeAttendanceDraft.records))
+      };
+      saveState();
+      renderAttendanceHistoryChips();
+    }
+
+    function setAttendanceViewMode(mode) {
+      attendanceViewMode = mode;
+      const isCard = mode === 'card';
+      document.getElementById('attendanceCardViewContainer').classList.toggle('hidden', !isCard);
+      document.getElementById('attendanceTableViewContainer').classList.toggle('hidden', isCard);
+      document.getElementById('cardModeSettings').classList.toggle('hidden', !isCard);
+
+      const btnCard = document.getElementById('btnModeCard');
+      const btnTable = document.getElementById('btnModeTable');
+
+      if (isCard) {
+        btnCard.className = 'flex-1 sm:flex-initial px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-xs';
+        btnTable.className = 'flex-1 sm:flex-initial px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-600 hover:bg-white';
+      } else {
+        btnTable.className = 'flex-1 sm:flex-initial px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-xs';
+        btnCard.className = 'flex-1 sm:flex-initial px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-600 hover:bg-white';
+      }
+
+      renderAttendanceViews();
+    }
+
+    function setRollCallPageSize(size) {
+      rollCallPageSize = size;
+      // Align index to page size boundary
+      rollCallIndex = Math.floor(rollCallIndex / size) * size;
+
+      const btn1 = document.getElementById('btnCardSize1');
+      const btn2 = document.getElementById('btnCardSize2');
+      if (size === 1) {
+        btn1.className = 'px-2.5 py-1 rounded text-xs font-bold bg-blue-100 text-blue-800 transition';
+        btn2.className = 'px-2.5 py-1 rounded text-xs font-bold text-slate-600 hover:bg-slate-100 transition';
+      } else {
+        btn2.className = 'px-2.5 py-1 rounded text-xs font-bold bg-blue-100 text-blue-800 transition';
+        btn1.className = 'px-2.5 py-1 rounded text-xs font-bold text-slate-600 hover:bg-slate-100 transition';
+      }
+      renderAttendanceViews();
+    }
+
+    function toggleAutoAdvance(checked) {
+      autoAdvanceOnAttendance = checked;
+    }
+
+    function navigateRollCall(direction) {
+      const students = getActiveStudents();
+      if (students.length === 0) return;
+      const nextIndex = rollCallIndex + (direction * rollCallPageSize);
+      if (nextIndex >= 0 && nextIndex < students.length) {
+        rollCallIndex = nextIndex;
+        renderRollCallCards();
+      } else if (direction > 0 && nextIndex >= students.length) {
+        showToast('Reached the last student in this class! Daily sheet saved.', 'success');
+        autoPersistAttendanceDraft();
+      }
+    }
+
+    function jumpToStudentRollCall(idx) {
+      rollCallIndex = Math.floor(idx / rollCallPageSize) * rollCallPageSize;
+      renderRollCallCards();
+    }
+
+    function setStudentField(studentId, field, value, triggerAutoNext = false) {
+      if (!activeAttendanceDraft.records[studentId]) {
+        activeAttendanceDraft.records[studentId] = { attendance: 'Present', noteStatus: 'Corrected', remarks: '' };
+      }
+      activeAttendanceDraft.records[studentId][field] = value;
+
+      // Helpful convenience: if teacher marks student "Absent", automatically set notebook to "Not Submitted" unless already changed
+      if (field === 'attendance' && value === 'Absent') {
+        activeAttendanceDraft.records[studentId].noteStatus = 'Not Submitted';
+      }
+
+      autoPersistAttendanceDraft();
+      renderAttendanceSummaryCounters();
+
+      if (attendanceViewMode === 'card') {
+        renderRollCallCards();
+        const students = getActiveStudents();
+        if (triggerAutoNext && autoAdvanceOnAttendance && rollCallPageSize === 1) {
+          if (rollCallIndex + 1 < students.length) {
+            setTimeout(() => {
+              rollCallIndex++;
+              renderRollCallCards();
+            }, 220);
+          } else {
+            showToast('Roll call completed for all students!', 'success');
+          }
+        }
+      } else {
+        renderAttendanceTable();
+      }
+    }
+
+    function appendQuickRemark(studentId, snippet) {
+      const current = (activeAttendanceDraft.records[studentId]?.remarks || '').trim();
+      const updated = current ? `${current}; ${snippet}` : snippet;
+      setStudentField(studentId, 'remarks', updated, false);
+    }
+
+    function renderAttendanceViews() {
+      renderAttendanceSummaryCounters();
+      renderRollCallCards();
+      renderAttendanceTable();
+    }
+
+    function renderAttendanceSummaryCounters() {
+      const students = getActiveStudents();
+      let present = 0, absent = 0, corrected = 0, pendingOrMissing = 0;
+
+      students.forEach(s => {
+        const r = activeAttendanceDraft.records[s.id] || { attendance: 'Present', noteStatus: 'Corrected' };
+        if (r.attendance === 'Present' || r.attendance === 'Late') present++;
+        if (r.attendance === 'Absent') absent++;
+        if (r.noteStatus === 'Corrected') corrected++;
+        else pendingOrMissing++;
+      });
+
+      document.getElementById('attendanceSummaryCards').innerHTML = `
+        <div class="bg-emerald-50 border border-emerald-200 p-2.5 sm:p-3 rounded-xl">
+          <div class="text-[11px] text-emerald-700 font-semibold">Present / Late</div>
+          <div class="text-lg sm:text-xl font-extrabold text-emerald-900">${present} <span class="text-xs font-normal text-emerald-700">/ ${students.length}</span></div>
+        </div>
+        <div class="bg-rose-50 border border-rose-200 p-2.5 sm:p-3 rounded-xl">
+          <div class="text-[11px] text-rose-700 font-semibold">Absent</div>
+          <div class="text-lg sm:text-xl font-extrabold text-rose-900">${absent}</div>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 p-2.5 sm:p-3 rounded-xl">
+          <div class="text-[11px] text-blue-700 font-semibold">Notes Corrected</div>
+          <div class="text-lg sm:text-xl font-extrabold text-blue-900">${corrected}</div>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 p-2.5 sm:p-3 rounded-xl">
+          <div class="text-[11px] text-amber-700 font-semibold">Notes Pending/Missing</div>
+          <div class="text-lg sm:text-xl font-extrabold text-amber-900">${pendingOrMissing}</div>
+        </div>
+      `;
+    }
+
+    function renderRollCallCards() {
+      const students = getActiveStudents();
+      const stage = document.getElementById('rollCallCardsStage');
+      const pillsEl = document.getElementById('rollCallQuickPills');
+      const progLabel = document.getElementById('rollCallProgressLabel');
+      const btnPrev = document.getElementById('btnPrevStudent');
+      const btnNext = document.getElementById('btnNextStudent');
+
+      if (students.length === 0) {
+        stage.innerHTML = `<div class="col-span-2 py-10 text-center text-slate-400 text-sm bg-slate-50 rounded-2xl border border-slate-200">No students in this class yet. Tap "Roster" at the top to add students.</div>`;
+        pillsEl.innerHTML = '';
+        progLabel.textContent = '0 Students';
+        btnPrev.disabled = true;
+        btnNext.disabled = true;
+        return;
+      }
+
+      if (rollCallIndex >= students.length) rollCallIndex = Math.max(0, students.length - rollCallPageSize);
+      if (rollCallIndex < 0) rollCallIndex = 0;
+
+      const sliceEnd = Math.min(students.length, rollCallIndex + rollCallPageSize);
+      const visibleStudents = students.slice(rollCallIndex, sliceEnd);
+
+      // Update grid layout: 1 column if 1 student, 2 columns on md+ if 2 students
+      stage.className = rollCallPageSize === 1
+        ? 'grid grid-cols-1 max-w-2xl mx-auto gap-4'
+        : 'grid grid-cols-1 md:grid-cols-2 gap-4';
+
+      progLabel.textContent = rollCallPageSize === 1
+        ? `Calling Student ${rollCallIndex + 1} of ${students.length}`
+        : `Calling Students ${rollCallIndex + 1}–${sliceEnd} of ${students.length}`;
+
+      btnPrev.disabled = rollCallIndex === 0;
+      btnNext.innerHTML = sliceEnd >= students.length
+        ? `<i class="fa-solid fa-check-circle"></i> Finish Roll Call`
+        : `Next ${rollCallPageSize === 2 ? 'Pair' : 'Student'} <i class="fa-solid fa-arrow-right"></i>`;
+
+      // Render quick-jump roll number pills
+      pillsEl.innerHTML = students.map((s, idx) => {
+        const rec = activeAttendanceDraft.records[s.id] || { attendance: 'Present' };
+        const isCurrent = idx >= rollCallIndex && idx < sliceEnd;
+        const dotColor = rec.attendance === 'Present'
+          ? 'bg-emerald-500'
+          : rec.attendance === 'Absent'
+          ? 'bg-rose-500'
+          : 'bg-amber-500';
+
+        return `
+          <button onclick="jumpToStudentRollCall(${idx})"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 shrink-0 ${
+              isCurrent
+                ? 'bg-blue-900 text-white border-blue-900 shadow-xs scale-105'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }">
+            <span class="w-2 h-2 rounded-full ${dotColor}"></span>
+            <span>${s.roll}</span>
+          </button>
+        `;
+      }).join('');
+
+      // Render 1 or 2 Student Cards
+      stage.innerHTML = visibleStudents.map((s, cardOffset) => {
+        const rec = activeAttendanceDraft.records[s.id] || { attendance: 'Present', noteStatus: 'Corrected', remarks: '' };
+        const stats = getStudentAttendanceStats(s.id);
+
+        const attStatusBanner = rec.attendance === 'Present'
+          ? 'border-emerald-500 bg-emerald-50/30'
+          : rec.attendance === 'Absent'
+          ? 'border-rose-500 bg-rose-50/30'
+          : 'border-amber-500 bg-amber-50/30';
+
+        return `
+          <div class="rounded-2xl border-2 ${attStatusBanner} bg-white p-4 sm:p-5 shadow-sm space-y-4 animate-card">
+            <!-- Student Identity Header -->
+            <div class="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-blue-900 text-white font-extrabold text-sm flex flex-col items-center justify-center shrink-0 shadow-xs">
+                  <span class="text-[9px] uppercase text-blue-200 font-semibold leading-none">Roll</span>
+                  <span class="text-base leading-tight">${s.roll}</span>
+                </div>
+                <div>
+                  <h3 class="text-lg sm:text-xl font-extrabold text-slate-900 leading-tight">${s.name}</h3>
+                  <div class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
+                    <span class="bg-slate-100 px-2 py-0.5 rounded-md font-medium">Past Att: <strong>${stats.present}/${stats.total}</strong></span>
+                    <span class="bg-slate-100 px-2 py-0.5 rounded-md font-medium">Notes Corrected: <strong>${stats.corrected}/${stats.total}</strong></span>
+                  </div>
+                </div>
+              </div>
+              <span class="text-xs font-extrabold uppercase px-2.5 py-1 rounded-full ${
+                rec.attendance === 'Present'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : rec.attendance === 'Absent'
+                  ? 'bg-rose-100 text-rose-800'
+                  : 'bg-amber-100 text-amber-800'
+              }">
+                ${rec.attendance}
+              </span>
+            </div>
+
+            <!-- 1. Class Attendance Big Touch Buttons -->
+            <div class="space-y-1.5">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">1. Mark Class Attendance</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button type="button" onclick="setStudentField('${s.id}', 'attendance', 'Present', true)"
+                  class="py-3 px-2 rounded-xl font-extrabold text-xs sm:text-sm border-2 transition flex flex-col sm:flex-row items-center justify-center gap-1.5 active:scale-95 ${
+                    rec.attendance === 'Present'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300'
+                  }">
+                  <i class="fa-solid fa-user-check text-base"></i>
+                  <span>Present</span>
+                </button>
+
+                <button type="button" onclick="setStudentField('${s.id}', 'attendance', 'Absent', true)"
+                  class="py-3 px-2 rounded-xl font-extrabold text-xs sm:text-sm border-2 transition flex flex-col sm:flex-row items-center justify-center gap-1.5 active:scale-95 ${
+                    rec.attendance === 'Absent'
+                      ? 'bg-rose-600 text-white border-rose-600 shadow-md'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-rose-300'
+                  }">
+                  <i class="fa-solid fa-user-xmark text-base"></i>
+                  <span>Absent</span>
+                </button>
+
+                <button type="button" onclick="setStudentField('${s.id}', 'attendance', 'Late', true)"
+                  class="py-3 px-2 rounded-xl font-extrabold text-xs sm:text-sm border-2 transition flex flex-col sm:flex-row items-center justify-center gap-1.5 active:scale-95 ${
+                    rec.attendance === 'Late'
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-md'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'
+                  }">
+                  <i class="fa-solid fa-clock text-base"></i>
+                  <span>Late</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. Notebook Correction Status Big Touch Buttons -->
+            <div class="space-y-1.5">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">2. Notebook Correction Status</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" onclick="setStudentField('${s.id}', 'noteStatus', 'Corrected', false)"
+                  class="py-2.5 px-3 rounded-xl font-bold text-xs border-2 transition flex items-center justify-center gap-1.5 active:scale-95 ${
+                    rec.noteStatus === 'Corrected'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
+                  }">
+                  <i class="fa-solid fa-book-open-reader"></i> Corrected
+                </button>
+
+                <button type="button" onclick="setStudentField('${s.id}', 'noteStatus', 'Submitted - Pending', false)"
+                  class="py-2.5 px-3 rounded-xl font-bold text-xs border-2 transition flex items-center justify-center gap-1.5 active:scale-95 ${
+                    rec.noteStatus === 'Submitted - Pending'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'
+                  }">
+                  <i class="fa-solid fa-hourglass-half"></i> Submitted (Pending)
+                </button>
+
+                <button type="button" onclick="setStudentField('${s.id}', 'noteStatus', 'Incomplete', false)"
+                  class="py-2.5 px-3 rounded-xl font-bold text-xs border-2 transition flex items-center justify-center gap-1.5 active:scale-95 ${
+                    rec.noteStatus === 'Incomplete'
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'
+                  }">
+                  <i class="fa-solid fa-pen-ruler"></i> Incomplete Work
+                </button>
+
+                <button type="button" onclick="setStudentField('${s.id}', 'noteStatus', 'Not Submitted', false)"
+                  class="py-2.5 px-3 rounded-xl font-bold text-xs border-2 transition flex items-center justify-center gap-1.5 active:scale-95 ${
+                    rec.noteStatus === 'Not Submitted'
+                      ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-rose-300'
+                  }">
+                  <i class="fa-solid fa-circle-exclamation"></i> Not Submitted
+                </button>
+              </div>
+            </div>
+
+            <!-- 3. Teacher Remarks & Quick Tap Chips -->
+            <div class="space-y-1.5">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">3. Remarks / Follow-up Note</label>
+              <input type="text" value="${rec.remarks || ''}"
+                oninput="activeAttendanceDraft.records['${s.id}'].remarks = this.value; autoPersistAttendanceDraft();"
+                placeholder="Type remark (e.g. Q4-Q6 incomplete, neat graphs)..."
+                class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              <div class="flex flex-wrap gap-1.5 pt-0.5">
+                <button type="button" onclick="appendQuickRemark('${s.id}', 'Neat work')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-medium">+ Neat work</button>
+                <button type="button" onclick="appendQuickRemark('${s.id}', 'Homework incomplete')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-medium">+ HW incomplete</button>
+                <button type="button" onclick="appendQuickRemark('${s.id}', 'Forgot notebook')" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-medium">+ Forgot book</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Touch Swipe & Keyboard Arrow Navigation for Roll Call Card Mode
+    function setupRollCallSwipeAndKeyboard() {
+      const stage = document.getElementById('rollCallCardsStage');
+      let touchStartX = 0;
+      let touchEndX = 0;
+
+      stage.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+      }, { passive: true });
+
+      stage.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        const delta = touchEndX - touchStartX;
+        if (Math.abs(delta) > 65) {
+          if (delta < 0) navigateRollCall(1);
+          else navigateRollCall(-1);
+        }
+      }, { passive: true });
+
+      window.addEventListener('keydown', e => {
+        if (currentTab !== 'attendance' || attendanceViewMode !== 'card') return;
+        const activeTag = document.activeElement ? document.activeElement.tagName : '';
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+        if (e.key === 'ArrowRight') navigateRollCall(1);
+        if (e.key === 'ArrowLeft') navigateRollCall(-1);
+      });
+    }
+
+    function renderAttendanceTable() {
+      const students = getActiveStudents();
+      const tbody = document.getElementById('attendanceTableBody');
+      if (students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400">No students in this class.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = students.map(s => {
+        const rec = activeAttendanceDraft.records[s.id] || { attendance: 'Present', noteStatus: 'Corrected', remarks: '' };
+        const stats = getStudentAttendanceStats(s.id);
+
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="py-2.5 px-3 font-bold text-slate-700">${s.roll}</td>
+            <td class="py-2.5 px-3 font-semibold text-slate-900">${s.name}</td>
+            <td class="py-2.5 px-3">
+              <select onchange="setStudentField('${s.id}', 'attendance', this.value, false)" class="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white">
+                <option value="Present" ${rec.attendance === 'Present' ? 'selected' : ''}>Present</option>
+                <option value="Absent" ${rec.attendance === 'Absent' ? 'selected' : ''}>Absent</option>
+                <option value="Late" ${rec.attendance === 'Late' ? 'selected' : ''}>Late</option>
+              </select>
+            </td>
+            <td class="py-2.5 px-3">
+              <select onchange="setStudentField('${s.id}', 'noteStatus', this.value, false)" class="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white">
+                <option value="Corrected" ${rec.noteStatus === 'Corrected' ? 'selected' : ''}>Submitted & Corrected</option>
+                <option value="Submitted - Pending" ${rec.noteStatus === 'Submitted - Pending' ? 'selected' : ''}>Submitted - Pending</option>
+                <option value="Incomplete" ${rec.noteStatus === 'Incomplete' ? 'selected' : ''}>Incomplete Work</option>
+                <option value="Not Submitted" ${rec.noteStatus === 'Not Submitted' ? 'selected' : ''}>Not Submitted</option>
+              </select>
+            </td>
+            <td class="py-2.5 px-3">
+              <input type="text" value="${rec.remarks || ''}"
+                oninput="activeAttendanceDraft.records['${s.id}'].remarks = this.value; autoPersistAttendanceDraft();"
+                placeholder="Add note/page remark..." class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs" />
+            </td>
+            <td class="py-2.5 px-3 text-xs text-slate-600 whitespace-nowrap">
+              Att: <strong>${stats.present}/${stats.total}</strong> • Notes: <strong>${stats.corrected}/${stats.total}</strong>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function markAllAttendance(attVal, noteVal) {
+      const students = getActiveStudents();
+      students.forEach(s => {
+        activeAttendanceDraft.records[s.id] = {
+          attendance: attVal,
+          noteStatus: noteVal,
+          remarks: activeAttendanceDraft.records[s.id]?.remarks || ''
+        };
+      });
+      autoPersistAttendanceDraft();
+      renderAttendanceViews();
+      showToast(`Marked all ${students.length} students as ${attVal} & ${noteVal}!`);
+    }
+
+    function saveAttendanceSheet(showFeedback = true) {
+      autoPersistAttendanceDraft();
+      renderAttendanceViews();
+      if (showFeedback) {
+        const date = document.getElementById('attDate').value;
+        showToast(`Saved Attendance & Notebook Check for ${date}!`);
+      }
+    }
+
+    function getStudentAttendanceStats(studentId) {
+      let total = 0, present = 0, corrected = 0;
+      Object.values(state.attendanceSheets).forEach(sheet => {
+        if (sheet.classId === state.activeClassId && sheet.records && sheet.records[studentId]) {
+          total++;
+          const r = sheet.records[studentId];
+          if (r.attendance === 'Present' || r.attendance === 'Late') present++;
+          if (r.noteStatus === 'Corrected') corrected++;
+        }
+      });
+      return { total, present, corrected };
+    }
+
+    function renderAttendanceHistoryChips() {
+      const sheets = Object.values(state.attendanceSheets)
+        .filter(s => s.classId === state.activeClassId)
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      const container = document.getElementById('attendanceHistoryLog');
+      if (sheets.length === 0) {
+        container.innerHTML = `<span class="text-xs text-slate-400">No saved sheets yet for this class.</span>`;
+        return;
+      }
+
+      const activeDate = document.getElementById('attDate').value;
+      container.innerHTML = sheets.map(s => `
+        <button onclick="document.getElementById('attDate').value='${s.date}'; loadAttendanceSheet();"
+          class="text-xs px-3 py-2 rounded-xl font-semibold border transition flex items-center gap-1.5 ${
+            s.date === activeDate
+              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+              : 'bg-slate-100 hover:bg-blue-50 text-slate-700 border-slate-200'
+          }">
+          <i class="fa-regular fa-calendar-check"></i>
+          <span>${s.date}</span>
+          ${s.noteTopic ? `<span class="opacity-80 text-[11px]">(${s.noteTopic})</span>` : ''}
+        </button>
+      `).join('');
+    }
+
+    // ==================== TAB 3: QUESTION PAPER PATTERN BUILDER ====================
+    function addSectionToDraft() {
+      const name = document.getElementById('secName').value.trim() || `Section ${draftSections.length + 1}`;
+      const startQ = parseInt(document.getElementById('secStartQ').value, 10);
+      const endQ = parseInt(document.getElementById('secEndQ').value, 10);
+      const marksPerQ = parseFloat(document.getElementById('secMarksPerQ').value);
+      const maxAttempt = parseInt(document.getElementById('secMaxAttempt').value, 10);
+
+      if (isNaN(startQ) || isNaN(endQ) || endQ < startQ) {
+        showToast('Invalid question range: "To Q.No" must be ≥ "From Q.No".', 'error');
+        return;
+      }
+      const totalQs = endQ - startQ + 1;
+      if (maxAttempt > totalQs || maxAttempt < 1) {
+        showToast(`Best N Choice (${maxAttempt}) cannot exceed total questions in this section (${totalQs}).`, 'error');
+        return;
+      }
+
+      for (const s of draftSections) {
+        if (Math.max(startQ, s.startQ) <= Math.min(endQ, s.endQ)) {
+          showToast(`Question numbers Q${startQ}–Q${endQ} overlap with ${s.name} (Q${s.startQ}–Q${s.endQ}).`, 'error');
+          return;
+        }
+      }
+
+      draftSections.push({
+        id: 'sec_' + Date.now(),
+        name,
+        startQ,
+        endQ,
+        marksPerQ,
+        maxAttempt
+      });
+
+      document.getElementById('secName').value = '';
+      document.getElementById('secStartQ').value = endQ + 1;
+      document.getElementById('secEndQ').value = endQ + 5;
+      document.getElementById('secMaxAttempt').value = 5;
+
+      renderDraftSections();
+      showToast(`Added ${name} (Q${startQ}–Q${endQ})`, 'info');
+    }
+
+    function removeDraftSection(id) {
+      draftSections = draftSections.filter(s => s.id !== id);
+      renderDraftSections();
+    }
+
+    function renderDraftSections() {
+      const container = document.getElementById('draftSectionsList');
+      let maxExamMarks = 0;
+
+      if (draftSections.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic py-2">No sections added yet. Add at least one section above.</div>`;
+        document.getElementById('draftTotalMarksLabel').textContent = `Max Exam Total: 0 Marks`;
+        return;
+      }
+
+      container.innerHTML = draftSections.map(s => {
+        const totalQs = s.endQ - s.startQ + 1;
+        const secMaxMarks = s.maxAttempt * s.marksPerQ;
+        maxExamMarks += secMaxMarks;
+        return `
+          <div class="flex items-center justify-between bg-slate-100 px-3 py-2 rounded-xl border border-slate-200 text-xs">
+            <div>
+              <span class="font-bold text-slate-800">${s.name}</span>:
+              Q${s.startQ}–Q${s.endQ} (${s.marksPerQ}M each) •
+              <span class="text-blue-700 font-semibold">Best ${s.maxAttempt} of ${totalQs} (${secMaxMarks}M)</span>
+            </div>
+            <button onclick="removeDraftSection('${s.id}')" class="text-rose-500 hover:text-rose-700 font-bold ml-2 px-1">&times;</button>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('draftTotalMarksLabel').textContent = `Max Exam Total: ${maxExamMarks} Marks`;
+    }
+
+    function saveExamPattern() {
+      const name = document.getElementById('examNameInput').value.trim();
+      const date = document.getElementById('examDateInput').value;
+      const collected = parseInt(document.getElementById('examCollectedInput').value, 10) || getActiveStudents().length;
+
+      if (!name) {
+        showToast('Please enter an Exam Name.', 'error');
+        return;
+      }
+      if (draftSections.length === 0) {
+        showToast('Please add at least one section to the question paper pattern.', 'error');
+        return;
+      }
+
+      const newExam = {
+        id: 'ex_' + Date.now(),
+        classId: state.activeClassId,
+        name,
+        date,
+        papersCollected: collected,
+        sections: JSON.parse(JSON.stringify(draftSections))
+      };
+
+      state.exams.unshift(newExam);
+      saveState();
+      document.getElementById('examNameInput').value = '';
+      renderExamsList();
+      initGraderWorkspace();
+      showToast(`Saved exam pattern "${name}"!`);
+    }
+
+    function getExamMaxMarks(exam) {
+      return exam.sections.reduce((acc, s) => acc + (s.maxAttempt * s.marksPerQ), 0);
+    }
+
+    function renderExamsList() {
+      const container = document.getElementById('examsListContainer');
+      const classExams = state.exams.filter(e => e.classId === state.activeClassId);
+      const students = getActiveStudents();
+
+      if (classExams.length === 0) {
+        container.innerHTML = `<div class="text-sm text-slate-400 py-8 text-center">No exams created for this class yet. Use the form to define a question paper pattern.</div>`;
+        return;
+      }
+
+      container.innerHTML = classExams.map(ex => {
+        const gradedCount = students.filter(s => state.scores[`${ex.id}_${s.id}`]).length;
+        const collected = ex.papersCollected || students.length;
+        const pending = Math.max(0, collected - gradedCount);
+        const maxMarks = getExamMaxMarks(ex);
+
+        return `
+          <div class="border border-slate-200 rounded-2xl p-4 hover:border-blue-300 transition space-y-3">
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h3 class="font-bold text-slate-900 text-sm sm:text-base">${ex.name}</h3>
+                <p class="text-xs text-slate-500">Exam Date: ${ex.date} • Max Marks: <strong>${maxMarks}</strong></p>
+              </div>
+              <button onclick="openExamInGrader('${ex.id}')" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs">
+                Grade Papers &rarr;
+              </button>
+            </div>
+
+            <!-- Paper Correction Status Tracker -->
+            <div class="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+              <div>
+                <span class="text-slate-500 block text-[11px]">Papers Collected</span>
+                <input type="number" min="0" value="${collected}" onchange="updateCollectedCount('${ex.id}', this.value)"
+                  class="font-bold text-slate-800 bg-white border border-slate-300 rounded-lg px-2 py-1 w-16 mt-0.5" />
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Papers Corrected</span>
+                <span class="font-extrabold text-emerald-700 text-sm">${gradedCount} / ${students.length}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px]">Pending Correction</span>
+                <span class="font-extrabold ${pending > 0 ? 'text-amber-600' : 'text-slate-500'} text-sm">${pending}</span>
+              </div>
+            </div>
+
+            <!-- Sections Summary -->
+            <div class="flex flex-wrap gap-1.5">
+              ${ex.sections.map(s => `
+                <span class="text-[11px] bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-lg">
+                  <strong>${s.name}:</strong> Q${s.startQ}–Q${s.endQ} (${s.marksPerQ}M, Best ${s.maxAttempt})
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateCollectedCount(examId, val) {
+      const ex = state.exams.find(e => e.id === examId);
+      if (ex) {
+        ex.papersCollected = parseInt(val, 10) || 0;
+        saveState();
+        renderExamsList();
+        showToast('Updated papers collected count', 'info');
+      }
+    }
+
+    function openExamInGrader(examId) {
+      switchTab('grader');
+      document.getElementById('graderExamSelect').value = examId;
+      initGraderWorkspace();
+    }
+
+    // ==================== TAB 4: SMART EXAM TOTALING & ANTI-DUPLICATE ENGINE ====================
+    function initGraderWorkspace() {
+      const examSel = document.getElementById('graderExamSelect');
+      const stuSel = document.getElementById('graderStudentSelect');
+      const classExams = state.exams.filter(e => e.classId === state.activeClassId);
+      const students = getActiveStudents();
+
+      const currentEx = examSel.value;
+      examSel.innerHTML = classExams.map(e => `<option value="${e.id}">${e.name} (Max: ${getExamMaxMarks(e)}M)</option>`).join('');
+      if (currentEx && classExams.some(e => e.id === currentEx)) {
+        examSel.value = currentEx;
+      }
+
+      const currentStu = stuSel.value;
+      stuSel.innerHTML = students.map(s => {
+        const exId = examSel.value;
+        const isGraded = state.scores[`${exId}_${s.id}`];
+        return `<option value="${s.id}">${s.roll} - ${s.name} ${isGraded ? '✓ (Graded)' : ''}</option>`;
+      }).join('');
+      if (currentStu && students.some(s => s.id === currentStu)) {
+        stuSel.value = currentStu;
+      }
+
+      loadStudentIntoGrader();
+    }
+
+    function getActiveExam() {
+      const exId = document.getElementById('graderExamSelect').value;
+      return state.exams.find(e => e.id === exId) || null;
+    }
+
+    function findSectionForQuestion(exam, qNo) {
+      if (!exam) return null;
+      return exam.sections.find(s => qNo >= s.startQ && qNo <= s.endQ) || null;
+    }
+
+    function loadStudentIntoGrader() {
+      const exam = getActiveExam();
+      const studentId = document.getElementById('graderStudentSelect').value;
+      pendingDuplicate = null;
+      document.getElementById('duplicateAlertBox').classList.add('hidden');
+      document.getElementById('graderErrorBanner').classList.add('hidden');
+
+      if (!exam || !studentId) {
+        document.getElementById('graderSectionsContainer').innerHTML = `<div class="bg-white p-6 rounded-2xl text-center text-slate-400">Create an Exam Pattern and add Students to begin grading.</div>`;
+        return;
+      }
+
+      const key = `${exam.id}_${studentId}`;
+      const saved = state.scores[key];
+      if (saved) {
+        activeGraderMarks = JSON.parse(JSON.stringify(saved.marks || {}));
+        activeAuditLog = JSON.parse(JSON.stringify(saved.auditLog || []));
+      } else {
+        activeGraderMarks = {};
+        activeAuditLog = [];
+      }
+
+      renderGraderBreakdown();
+    }
+
+    function evaluateExamScore(exam, marksMap) {
+      let grandTotal = 0;
+      let maxTotal = 0;
+      let extraChoiceIgnoredCount = 0;
+      const questionStatus = {};
+
+      exam.sections.forEach(sec => {
+        maxTotal += sec.maxAttempt * sec.marksPerQ;
+        const attemptedInSec = [];
+
+        for (let q = sec.startQ; q <= sec.endQ; q++) {
+          const val = marksMap[q];
+          if (val !== undefined && val !== null && val !== '') {
+            attemptedInSec.push({ q, mark: parseFloat(val) });
+          } else {
+            questionStatus[q] = { awarded: null, counted: 0, status: 'UNATTEMPTED', maxMark: sec.marksPerQ };
+          }
+        }
+
+        attemptedInSec.sort((a, b) => b.mark - a.mark || a.q - b.q);
+
+        attemptedInSec.forEach((item, idx) => {
+          if (idx < sec.maxAttempt) {
+            grandTotal += item.mark;
+            questionStatus[item.q] = { awarded: item.mark, counted: item.mark, status: 'COUNTED', maxMark: sec.marksPerQ };
+          } else {
+            extraChoiceIgnoredCount++;
+            questionStatus[item.q] = { awarded: item.mark, counted: 0, status: 'IGNORED_CHOICE', maxMark: sec.marksPerQ };
+          }
+        });
+      });
+
+      return { grandTotal, maxTotal, extraChoiceIgnoredCount, questionStatus };
+    }
+
+    function handleRapidMarkEntry(e) {
+      e.preventDefault();
+      const exam = getActiveExam();
+      if (!exam) return;
+
+      const qInput = document.getElementById('rapidQNo');
+      const mInput = document.getElementById('rapidMarks');
+      const errBanner = document.getElementById('graderErrorBanner');
+      errBanner.classList.add('hidden');
+
+      const qNo = parseInt(qInput.value, 10);
+      const newMark = parseFloat(mInput.value);
+
+      const sec = findSectionForQuestion(exam, qNo);
+      if (!sec) {
+        errBanner.textContent = `Question Q${qNo} does not exist in "${exam.name}". Check the section ranges.`;
+        errBanner.classList.remove('hidden');
+        return;
+      }
+
+      if (newMark < 0 || newMark > sec.marksPerQ) {
+        errBanner.textContent = `Invalid Mark! Q${qNo} belongs to "${sec.name}" where max mark is ${sec.marksPerQ}. You entered ${newMark}.`;
+        errBanner.classList.remove('hidden');
+        return;
+      }
+
+      // DUPLICATE DETECTION: Check if this question was already awarded marks earlier
+      if (activeGraderMarks[qNo] !== undefined && activeGraderMarks[qNo] !== null) {
+        const existingMark = parseFloat(activeGraderMarks[qNo]);
+        pendingDuplicate = { qNo, oldMark: existingMark, newMark, maxMark: sec.marksPerQ };
+        const alertBox = document.getElementById('duplicateAlertBox');
+        const alertMsg = document.getElementById('duplicateAlertMessage');
+        alertMsg.innerHTML = `Question <strong>Q${qNo}</strong> was already marked earlier with <strong>${existingMark} / ${sec.marksPerQ}</strong>. You just entered <strong>${newMark} / ${sec.marksPerQ}</strong>. Choose how to resolve this duplicate answer so marks are not added twice:`;
+        alertBox.classList.remove('hidden');
+        showToast(`Duplicate Question Q${qNo} blocked!`, 'warning');
+        return;
+      }
+
+      activeGraderMarks[qNo] = newMark;
+      activeAuditLog.unshift({
+        time: new Date().toLocaleTimeString(),
+        qNo,
+        enteredMark: newMark,
+        action: 'ADDED',
+        note: `Recorded ${newMark}/${sec.marksPerQ} for Q${qNo}`
+      });
+
+      qInput.value = '';
+      mInput.value = '';
+      qInput.focus();
+      renderGraderBreakdown();
+    }
+
+    function resolveDuplicate(strategy) {
+      if (!pendingDuplicate) return;
+      const { qNo, oldMark, newMark, maxMark } = pendingDuplicate;
+      const now = new Date().toLocaleTimeString();
+
+      if (strategy === 'KEEP_HIGHER') {
+        const best = Math.max(oldMark, newMark);
+        activeGraderMarks[qNo] = best;
+        activeAuditLog.unshift({
+          time: now,
+          qNo,
+          enteredMark: newMark,
+          action: 'DUPLICATE_BLOCKED',
+          note: `Duplicate Q${qNo} answer (Old: ${oldMark}, New: ${newMark}). Kept higher mark (${best}/${maxMark}).`
+        });
+      } else if (strategy === 'KEEP_EXISTING') {
+        activeAuditLog.unshift({
+          time: now,
+          qNo,
+          enteredMark: newMark,
+          action: 'DUPLICATE_BLOCKED',
+          note: `Duplicate Q${qNo} answer (${newMark}) ignored. Kept original mark (${oldMark}/${maxMark}).`
+        });
+      } else if (strategy === 'OVERWRITE') {
+        activeGraderMarks[qNo] = newMark;
+        activeAuditLog.unshift({
+          time: now,
+          qNo,
+          enteredMark: newMark,
+          action: 'DUPLICATE_BLOCKED',
+          note: `Duplicate Q${qNo} answer: replaced old mark (${oldMark}) with new mark (${newMark}/${maxMark}).`
+        });
+      }
+
+      pendingDuplicate = null;
+      document.getElementById('duplicateAlertBox').classList.add('hidden');
+      document.getElementById('rapidQNo').value = '';
+      document.getElementById('rapidMarks').value = '';
+      document.getElementById('rapidQNo').focus();
+      renderGraderBreakdown();
+      showToast(`Resolved duplicate Q${qNo}!`, 'success');
+    }
+
+    function removeQuestionMark(qNo) {
+      delete activeGraderMarks[qNo];
+      activeAuditLog.unshift({
+        time: new Date().toLocaleTimeString(),
+        qNo,
+        enteredMark: 0,
+        action: 'REMOVED',
+        note: `Cleared mark for Q${qNo}`
+      });
+      renderGraderBreakdown();
+    }
+
+    function renderGraderBreakdown() {
+      const exam = getActiveExam();
+      if (!exam) return;
+
+      const evalResult = evaluateExamScore(exam, activeGraderMarks);
+      const pct = evalResult.maxTotal > 0 ? ((evalResult.grandTotal / evalResult.maxTotal) * 100).toFixed(1) : '0.0';
+      const dupCount = activeAuditLog.filter(a => a.action === 'DUPLICATE_BLOCKED').length;
+
+      document.getElementById('liveFinalTotal').textContent = evalResult.grandTotal;
+      document.getElementById('liveMaxTotal').textContent = `/ ${evalResult.maxTotal} Marks`;
+      document.getElementById('livePercentageBadge').textContent = `${pct}%`;
+      document.getElementById('liveDupCounter').innerHTML = `Duplicate Answers Blocked: <strong class="text-amber-300">${dupCount}</strong>`;
+      document.getElementById('liveChoiceCounter').innerHTML = `Extra Optional Answers Ignored: <strong class="text-amber-300">${evalResult.extraChoiceIgnoredCount}</strong>`;
+
+      const secContainer = document.getElementById('graderSectionsContainer');
+      secContainer.innerHTML = exam.sections.map(sec => {
+        const totalQs = sec.endQ - sec.startQ + 1;
+        let secSubtotal = 0;
+        let qRows = '';
+
+        for (let q = sec.startQ; q <= sec.endQ; q++) {
+          const st = evalResult.questionStatus[q];
+          if (st.status === 'COUNTED') secSubtotal += st.counted;
+
+          const statusBadge = st.status === 'COUNTED'
+            ? `<span class="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded-md">✓ Counted (${st.counted}M)</span>`
+            : st.status === 'IGNORED_CHOICE'
+            ? `<span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2 py-0.5 rounded-md">Ignored (Extra Choice — 0M)</span>`
+            : `<span class="text-slate-400 text-xs">Not Attempted</span>`;
+
+          qRows += `
+            <tr class="border-b border-slate-100 ${st.status === 'IGNORED_CHOICE' ? 'bg-amber-50/50' : ''}">
+              <td class="py-2 px-3 font-bold text-slate-800">Q${q}</td>
+              <td class="py-2 px-3 text-slate-500 text-xs">${sec.marksPerQ}M</td>
+              <td class="py-2 px-3 font-extrabold ${st.awarded !== null ? 'text-slate-900' : 'text-slate-400'}">
+                ${st.awarded !== null ? st.awarded : '—'}
+              </td>
+              <td class="py-2 px-3">${statusBadge}</td>
+              <td class="py-2 px-3 text-right">
+                ${st.awarded !== null ? `<button onclick="removeQuestionMark(${q})" class="text-xs text-rose-500 hover:underline font-semibold">Clear</button>` : ''}
+              </td>
+            </tr>
+          `;
+        }
+
+        return `
+          <div class="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 class="font-bold text-slate-800 text-sm">${sec.name}</h4>
+                <p class="text-xs text-slate-500">Rule: Count best <strong>${sec.maxAttempt}</strong> out of ${totalQs} questions (${sec.marksPerQ}M each)</p>
+              </div>
+              <div class="text-xs sm:text-sm font-extrabold text-blue-800">
+                Section Total: ${secSubtotal} / ${sec.maxAttempt * sec.marksPerQ}
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="text-[11px] uppercase text-slate-500 border-b border-slate-200 bg-slate-50/50">
+                    <th class="py-2 px-3">Q.No</th>
+                    <th class="py-2 px-3">Max</th>
+                    <th class="py-2 px-3">Awarded</th>
+                    <th class="py-2 px-3">Pattern Status</th>
+                    <th class="py-2 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>${qRows}</tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const auditEl = document.getElementById('bookletAuditList');
+      if (activeAuditLog.length === 0) {
+        auditEl.innerHTML = `<div class="text-slate-400 italic py-2">No marks entered yet. Use the Rapid Booklet Entry form above.</div>`;
+      } else {
+        auditEl.innerHTML = activeAuditLog.map(item => {
+          const isDup = item.action === 'DUPLICATE_BLOCKED';
+          return `
+            <div class="p-2 rounded-xl border ${isDup ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-slate-50 border-slate-200 text-slate-700'} flex justify-between items-start gap-2">
+              <div>
+                <span class="font-bold">[Q${item.qNo}]</span> ${item.note}
+              </div>
+              <span class="text-[10px] text-slate-400 shrink-0">${item.time}</span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function clearCurrentStudentDraft() {
+      askConfirmation(
+        'Clear Entered Marks?',
+        'Are you sure you want to clear all entered marks for this student on the current exam?',
+        () => {
+          activeGraderMarks = {};
+          activeAuditLog = [];
+          renderGraderBreakdown();
+          showToast('Cleared marks for current student', 'info');
+        }
+      );
+    }
+
+    function saveGradedPaper() {
+      const exam = getActiveExam();
+      const studentId = document.getElementById('graderStudentSelect').value;
+      if (!exam || !studentId) return;
+
+      const key = `${exam.id}_${studentId}`;
+      state.scores[key] = {
+        examId: exam.id,
+        studentId,
+        updatedAt: new Date().toLocaleString(),
+        marks: JSON.parse(JSON.stringify(activeGraderMarks)),
+        auditLog: JSON.parse(JSON.stringify(activeAuditLog))
+      };
+
+      saveState();
+      initGraderWorkspace();
+      showToast('Student score sheet saved to history!');
+    }
+
+    // ==================== TAB 5: STUDENT DETAILED SCORE SHEET HISTORY ====================
+    function renderHistoryView() {
+      const students = getActiveStudents();
+      const listEl = document.getElementById('historyStudentList');
+
+      if (students.length === 0) {
+        listEl.innerHTML = `<div class="text-xs text-slate-400">No students in this class.</div>`;
+        document.getElementById('studentDetailedReportContainer').innerHTML = `<div class="text-slate-400 text-sm">Add students to view history.</div>`;
+        return;
+      }
+
+      if (!selectedHistoryStudentId || !students.some(s => s.id === selectedHistoryStudentId)) {
+        selectedHistoryStudentId = students[0].id;
+      }
+
+      const classExams = state.exams.filter(e => e.classId === state.activeClassId);
+
+      listEl.innerHTML = students.map(s => {
+        const isSelected = s.id === selectedHistoryStudentId;
+        let examsTaken = 0;
+        classExams.forEach(ex => {
+          if (state.scores[`${ex.id}_${s.id}`]) examsTaken++;
+        });
+
+        return `
+          <button onclick="selectHistoryStudent('${s.id}')"
+            class="w-full text-left p-3 rounded-xl border transition flex items-center justify-between ${
+              isSelected ? 'bg-blue-50 border-blue-500 shadow-xs' : 'bg-white hover:bg-slate-50 border-slate-200'
+            }">
+            <div>
+              <div class="font-bold text-sm text-slate-900">${s.roll} — ${s.name}</div>
+              <div class="text-xs text-slate-500">${examsTaken} / ${classExams.length} Exams Graded</div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-xs text-blue-600"></i>
+          </button>
+        `;
+      }).join('');
+
+      renderSelectedStudentDetailedReport();
+    }
+
+    function selectHistoryStudent(studentId) {
+      selectedHistoryStudentId = studentId;
+      renderHistoryView();
+    }
+
+    function renderSelectedStudentDetailedReport() {
+      const container = document.getElementById('studentDetailedReportContainer');
+      const student = state.students.find(s => s.id === selectedHistoryStudentId);
+      if (!student) return;
+
+      const classExams = state.exams.filter(e => e.classId === state.activeClassId);
+      const attStats = getStudentAttendanceStats(student.id);
+
+      const examCardsHtml = classExams.map(exam => {
+        const record = state.scores[`${exam.id}_${student.id}`];
+        if (!record) {
+          return `
+            <div class="border border-slate-200 rounded-2xl p-4 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 class="font-bold text-slate-800 text-sm">${exam.name}</h4>
+                <p class="text-xs text-slate-500">Exam Date: ${exam.date} • Status: Not Graded Yet</p>
+              </div>
+              <button onclick="openStudentInGrader('${exam.id}', '${student.id}')" class="text-xs bg-blue-600 text-white px-3.5 py-2 rounded-xl font-bold">
+                Grade Now
+              </button>
+            </div>
+          `;
+        }
+
+        const evalRes = evaluateExamScore(exam, record.marks);
+        const pct = evalRes.maxTotal > 0 ? ((evalRes.grandTotal / evalRes.maxTotal) * 100).toFixed(1) : '0.0';
+
+        const questionChips = [];
+        exam.sections.forEach(sec => {
+          for (let q = sec.startQ; q <= sec.endQ; q++) {
+            const st = evalRes.questionStatus[q];
+            const chipClass = st.status === 'COUNTED'
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+              : st.status === 'IGNORED_CHOICE'
+              ? 'bg-amber-50 border-amber-300 text-amber-800 line-through'
+              : 'bg-slate-50 border-slate-200 text-slate-400';
+
+            questionChips.push(`
+              <div class="border rounded-xl p-2 text-center ${chipClass}">
+                <div class="text-[10px] font-bold uppercase">Q${q}</div>
+                <div class="text-xs font-extrabold">${st.awarded !== null ? st.awarded : '—'}<span class="font-normal text-[10px]">/${sec.marksPerQ}</span></div>
+              </div>
+            `);
+          }
+        });
+
+        const dupLogs = (record.auditLog || []).filter(a => a.action === 'DUPLICATE_BLOCKED');
+
+        return `
+          <div class="border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4">
+            <div class="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm sm:text-base">${exam.name}</h4>
+                <p class="text-xs text-slate-500">Exam Date: ${exam.date} • Updated: ${record.updatedAt}</p>
+              </div>
+              <div class="text-right">
+                <div class="text-xl sm:text-2xl font-extrabold text-blue-900">${evalRes.grandTotal} <span class="text-xs sm:text-sm font-normal text-slate-500">/ ${evalRes.maxTotal} (${pct}%)</span></div>
+                <button onclick="openStudentInGrader('${exam.id}', '${student.id}')" class="text-xs text-blue-600 hover:underline font-semibold no-print">Edit Score Sheet</button>
+              </div>
+            </div>
+
+            <div>
+              <div class="text-xs font-bold uppercase text-slate-500 mb-2">Question-by-Question Score Breakdown</div>
+              <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 gap-2">
+                ${questionChips.join('')}
+              </div>
+            </div>
+
+            ${dupLogs.length > 0 ? `
+              <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 space-y-1">
+                <div class="font-bold"><i class="fa-solid fa-shield-halved mr-1"></i>Duplicate Answer Safeguard History:</div>
+                ${dupLogs.map(d => `<div>• ${d.note}</div>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4 mb-5">
+          <div>
+            <span class="text-[11px] font-bold uppercase text-blue-700">Student Cumulative Profile & Score Sheet History</span>
+            <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">${student.name} (Roll No: ${student.roll})</h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Attendance: <strong>${attStats.present}/${attStats.total} days</strong> •
+              Notebooks Corrected: <strong>${attStats.corrected}/${attStats.total} checks</strong>
+            </p>
+          </div>
+          <button onclick="window.print()" class="no-print bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Print Score Sheet
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          ${examCardsHtml || `<div class="text-sm text-slate-400">No exams configured for this class yet.</div>`}
+        </div>
+      `;
+    }
+
+    function openStudentInGrader(examId, studentId) {
+      switchTab('grader');
+      document.getElementById('graderExamSelect').value = examId;
+      initGraderWorkspace();
+      document.getElementById('graderStudentSelect').value = studentId;
+      loadStudentIntoGrader();
+    }
+
+    function exportClassScoresCSV() {
+      const students = getActiveStudents();
+      const classExams = state.exams.filter(e => e.classId === state.activeClassId);
+      const headers = ['Roll No', 'Student Name', ...classExams.map(e => `${e.name} (Max ${getExamMaxMarks(e)})`)];
+
+      const rows = students.map(s => {
+        const cols = [s.roll, `"${s.name}"`];
+        classExams.forEach(ex => {
+          const rec = state.scores[`${ex.id}_${s.id}`];
+          if (rec) {
+            const ev = evaluateExamScore(ex, rec.marks);
+            cols.push(ev.grandTotal);
+          } else {
+            cols.push('Not Graded');
+          }
+        });
+        return cols.join(',');
+      });
+
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `class_scores_${state.activeClassId}.csv`;
+      a.click();
+      showToast('Exported class score sheet CSV!');
+    }
+
+    // ==================== MODAL: MANAGE CLASSES & STUDENTS ====================
+    function openClassModal() {
+      document.getElementById('classModal').classList.remove('hidden');
+      document.getElementById('classModal').classList.add('flex');
+      renderModalStudentList();
+    }
+
+    function closeClassModal() {
+      document.getElementById('classModal').classList.add('hidden');
+      document.getElementById('classModal').classList.remove('flex');
+    }
+
+    function addNewClass(e) {
+      e.preventDefault();
+      const name = document.getElementById('newClassName').value.trim();
+      if (!name) return;
+      const newC = { id: 'c_' + Date.now(), name };
+      state.classes.push(newC);
+      state.activeClassId = newC.id;
+      saveState();
+      document.getElementById('newClassName').value = '';
+      renderGlobalClassSelect();
+      handleClassChange(newC.id);
+      renderModalStudentList();
+      showToast(`Created class "${name}"!`);
+    }
+
+    function addNewStudent(e) {
+      e.preventDefault();
+      const roll = document.getElementById('newStudentRoll').value.trim();
+      const name = document.getElementById('newStudentName').value.trim();
+      if (!roll || !name) return;
+      state.students.push({
+        id: 's_' + Date.now(),
+        classId: state.activeClassId,
+        roll,
+        name
+      });
+      saveState();
+      document.getElementById('newStudentRoll').value = '';
+      document.getElementById('newStudentName').value = '';
+      renderModalStudentList();
+      loadAttendanceSheet();
+      initGraderWorkspace();
+      renderHistoryView();
+      showToast(`Added ${name} (Roll ${roll})!`);
+    }
+
+    function removeStudent(studentId) {
+      state.students = state.students.filter(s => s.id !== studentId);
+      saveState();
+      renderModalStudentList();
+      loadAttendanceSheet();
+      initGraderWorkspace();
+      renderHistoryView();
+      showToast('Student removed from roster', 'warning');
+    }
+
+    function renderModalStudentList() {
+      const students = getActiveStudents();
+      const container = document.getElementById('modalStudentList');
+      if (students.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">No students in this class yet.</div>`;
+        return;
+      }
+      container.innerHTML = students.map(s => `
+        <div class="flex items-center justify-between px-3.5 py-2.5 text-sm">
+          <div><strong class="text-slate-800">${s.roll}</strong> — ${s.name}</div>
+          <button onclick="removeStudent('${s.id}')" class="text-xs text-rose-600 hover:underline font-semibold">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
